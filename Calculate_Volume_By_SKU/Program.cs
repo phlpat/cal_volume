@@ -356,12 +356,12 @@ namespace ExcelManipulation
                 sku = super_premiumMT;
             }
 
-            else if (nameProduct.Contains("MT") && nameProduct.Contains("กล่องโฟม"))
+            else if (nameProduct.Contains(" MT ") && nameProduct.Contains("กล่องโฟม"))
             {
                 sku = foamMT;
             }
 
-            else if (nameProduct.Contains("FM") && nameProduct.Contains("กล่องโฟม"))
+            else if (nameProduct.Contains(" FM ") && nameProduct.Contains("กล่องโฟม"))
             {
                 if (nameProduct.Contains("10 KG"))
                 {
@@ -377,12 +377,12 @@ namespace ExcelManipulation
                 }
             }
 
-            else if (nameProduct.Contains("PM") && nameProduct.Contains("กล่องโฟม"))
+            else if (nameProduct.Contains(" PM ") && nameProduct.Contains("กล่องโฟม"))
             {
                 sku = foamPM;
             }
 
-            else if (nameProduct.Contains("MT") && nameProduct.Contains("STD"))
+            else if ((nameProduct.Contains(" MT ") && nameProduct.Contains(" STD ")) || (nameProduct.Contains("10KG") && nameProduct.Contains("STD ")))
             {
                 sku = stdMT_10kg;
             }
