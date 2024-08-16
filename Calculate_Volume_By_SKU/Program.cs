@@ -30,7 +30,8 @@ namespace ExcelManipulation
         static void Main(string[] args)
         {
             TTVolume();
-            MTVolume();
+            MTMakroVolume();
+            MTLotusVolume();
         }
 
         private static string DetermineSize(string nameProduct)
@@ -825,14 +826,14 @@ namespace ExcelManipulation
 
         }
 
-        private static void MTVolume()
+        private static void MTMakroVolume()
         {
             // Set the license context before using EPPlus
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial; // or LicenseContext.Commercial
 
             // Change the directory path as needed
-            string directoryPath = @"C:\Volume_Sales\MT";
-            string outPutPath = @"C:\Volume_Sales\Volume_output\outputMT.xlsx";
+            string directoryPath = @"C:\Volume_Sales\MT(Makro)";
+            string outPutPath = @"C:\Volume_Sales\Volume_output\outputMT(Makro).xlsx";
 
             // Get all Excel files in the specified directory
             string[] excelFiles = Directory.GetFiles(directoryPath, "*.xlsx");
@@ -1003,6 +1004,210 @@ namespace ExcelManipulation
                         worksheet.Cells[row, 2].Value = kvp.Key.sku;
                         worksheet.Cells[row, 3].Value = kvp.Value;
                         worksheet.Cells[row, 4].Value = kvp.Value/1000f;
+
+                        row++;
+                        previousDate = kvp.Key.date;
+                    }
+
+                    // Save the Excel package to a file
+                    if (File.Exists(outPutPath))
+                    {
+                        excelPackage.Save();
+                    }
+                    else
+                    {
+                        excelPackage.SaveAs(new FileInfo(outPutPath));
+                    }
+                }
+                foreach (var sizeCount in sizeCounts.OrderBy(kvp => kvp.Key.date).ThenBy(kvp => kvp.Key.sku))
+                {
+                    Console.WriteLine(1);
+                    Console.WriteLine($"{sizeCount.Key.date}: size = {sizeCount.Key.sku} Weight = {sizeCount.Value}");
+                }
+
+                Console.WriteLine(); // Add a separator line between files
+            }
+
+        }
+
+        private static void MTLotusVolume()
+        {
+            // Set the license context before using EPPlus
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial; // or LicenseContext.Commercial
+
+            // Change the directory path as needed
+            string directoryPath = @"C:\Volume_Sales\MT(Lotus)";
+            string outPutPath = @"C:\Volume_Sales\Volume_output\outputMT(Lotus).xlsx";
+
+            // Get all Excel files in the specified directory
+            string[] excelFiles = Directory.GetFiles(directoryPath, "*.xlsx");
+
+            if (excelFiles.Length == 0)
+            {
+                Console.WriteLine("No Excel files found in the directory.");
+                return;
+            }
+
+
+            // Set the console encoding to UTF-8
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            foreach (string excelFile in excelFiles)
+            {
+                Console.WriteLine($"Processing Excel file: {excelFile}");
+
+                //SKU declare
+                string super_premiumMT = "super_premiumMT";
+                string foamMT = "foamMT";
+                string foamFM_10kg = "foamFM_10kg";
+                string foamFM_5kg = "foamFM_5kg";
+                string foamFM_3kg = "foamFM_3kg";
+                string foamPM = "foamPM";
+                string stdMT_10kg = "stdMT_10kg";
+                string lotusB2B = "lotusB2B";
+                string lotusSTD = "lotusSTD";
+
+                var skuOrderMT = new List<string>
+                {
+                    "super_premiumMT",
+                    "foamMT",
+                    "foamFM_10kg",
+                    "foamFM_5kg",
+                    "foamFM_3kg",
+                    "foamPM",
+                    "stdMT_10kg",
+                    "lotusB2B",
+                    "lotusSTD"
+                };
+
+                Dictionary<DateAndSku, int> sizeCounts = new Dictionary<DateAndSku, int>();
+
+                // Load the Excel file using EPPlus
+                using (ExcelPackage excelPackage = new ExcelPackage(new FileInfo(excelFile)))
+                {
+                    // Access the first worksheet
+                    if (excelPackage.Workbook.Worksheets.Count > 0)
+                    {
+                        ExcelWorksheet worksheet = excelPackage.Workbook.Worksheets[0]; // Change the index if needed
+
+                        // Identify the columns corresponding to specific dates (excluding "Total" columns)
+                        var dateColumns = worksheet.Cells[1, 2, 1, worksheet.Dimension.Columns]
+                            .Where(cell => cell.Text.StartsWith("Total", StringComparison.OrdinalIgnoreCase) == false)
+                            .Select(cell => cell.Text).ToList();
+
+                        string date;
+                        int columncount = 1;
+
+
+
+                        for (int row = 3; row <= worksheet.Dimension.Rows - 3; row++)
+                        {
+                            var nameProduct = worksheet.Cells[row, 1].Text;
+                            columncount = 1;
+                            Console.WriteLine($"Row {row}:");
+
+                            for (int col = 3; col <= worksheet.Dimension.Columns - 3; col += 3)
+                            {
+                                date = dateColumns[columncount];
+                                var cellValue = worksheet.Cells[row, col].Text;
+                                Console.WriteLine($"{nameProduct} -> {date}: {cellValue}");
+
+                                if (nameProduct.Contains("กุ้ง") && !nameProduct.Contains("แช่แข็ง") && !nameProduct.Contains("หมึก") && !nameProduct.Contains("PDTO") && !nameProduct.Contains("BS") && cellValue != "")
+                                {
+                                    string sku = DetermineSizeMT(nameProduct);
+                                    DateAndSku key = new DateAndSku { date = date, sku = sku };
+                                    if (sizeCounts.TryGetValue(key, out int weight) && cellValue != "")
+                                    {
+                                        weight += Int32.Parse(cellValue.Replace(",", ""));
+                                        sizeCounts[key] = weight;
+                                    }
+                                    else if (sku == "super_premiumMT")
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = super_premiumMT }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+                                    else if (sku == "foamMT")
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = foamMT }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+                                    else if (sku == "foamFM_10kg")
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = foamFM_10kg }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+                                    else if ((sku == "foamFM_5kg"))
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = foamFM_5kg }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+                                    else if (sku == "foamFM_3kg")
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = foamFM_3kg }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+                                    else if (sku == "foamPM")
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = foamPM }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+                                    else if (sku == "stdMT_10kg")
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = stdMT_10kg }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+                                    else if (sku == "lotusB2B")
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = lotusB2B }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+                                    else if (sku == "lotusSTD")
+                                    {
+                                        sizeCounts.Add(new DateAndSku { date = date, sku = lotusSTD }, Int32.Parse(cellValue.Replace(",", "")));
+                                    }
+
+                                }
+                                columncount += 3;
+                            }
+
+                            Console.WriteLine(); // Move to the next line after completing a row
+
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("The workbook does not contain any worksheets.");
+                    }
+                }
+
+                var sortedSizeCounts = sizeCounts
+                                        .OrderBy(entry => entry.Key.date)
+                                        .ThenBy(entry => skuOrderMT.IndexOf(entry.Key.sku))
+                                        .ToDictionary(entry => entry.Key, entry => entry.Value);
+
+                if (File.Exists(outPutPath))
+                {
+                    File.Delete(outPutPath);
+                }
+
+                using (ExcelPackage excelPackage = new ExcelPackage(outPutPath))
+                {
+                    // Add a new worksheet to the Excel package
+                    string sheetName = Path.GetFileNameWithoutExtension(excelFile);
+                    ExcelWorksheet worksheet = excelPackage.Workbook.Worksheets.Add(sheetName);
+                    worksheet.Column(4).Style.Numberformat.Format = "0.000";
+
+                    // Headers
+                    worksheet.Cells[1, 1].Value = "Date";
+                    worksheet.Cells[1, 2].Value = "Size";
+                    worksheet.Cells[1, 3].Value = "Weight";
+                    worksheet.Cells[1, 4].Value = "Weight(Ton)";
+
+                    int row = 2;
+                    string previousDate = null;
+                    // Populate the worksheet with data from the dictionary
+                    foreach (var kvp in sortedSizeCounts)
+                    {
+                        if (previousDate != null && kvp.Key.date != previousDate)
+                        {
+                            row++;
+                        }
+                        worksheet.Cells[row, 1].Value = kvp.Key.date;
+                        worksheet.Cells[row, 2].Value = kvp.Key.sku;
+                        worksheet.Cells[row, 3].Value = kvp.Value;
+                        worksheet.Cells[row, 4].Value = kvp.Value / 1000f;
 
                         row++;
                         previousDate = kvp.Key.date;
