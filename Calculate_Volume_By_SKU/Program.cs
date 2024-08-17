@@ -351,12 +351,12 @@ namespace ExcelManipulation
 
             string sku = "";
 
-            if (nameProduct.Contains("ตาข่าย"))
+            if (nameProduct.Contains("ตาข่าย") || nameProduct.Contains("กุ้ง ซีพีแปซิฟิก") && nameProduct.Contains("/"))
             {
                 sku = super_premiumMT;
             }
 
-            else if (nameProduct.Contains(" MT ") && nameProduct.Contains("กล่องโฟม"))
+            else if (nameProduct.Contains(" MT ") && nameProduct.Contains("กล่องโฟม") && nameProduct.Contains("/"))
             {
                 sku = foamMT;
             }
